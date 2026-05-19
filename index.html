@@ -58,6 +58,94 @@
   <script type="text/babel">
     const { useState, useEffect } = React;
 
+    // --- GLOBÁLNÍ STATICKÁ DATA (Zabraňují chybám s nekonzistentním stavem) ---
+    
+    const GLANDS = [
+      { id: 1, name: "Hypothalamus", desc: "Řídí hypofýzu, spojuje nervovou a hormonální soustavu.", cx: 150, cy: 60 },
+      { id: 2, name: "Hypofýza", desc: "Podvěsek mozkový, 'řídící žláza žláz', tvoří např. růstový hormon či TSH.", cx: 162, cy: 75 },
+      { id: 3, name: "Štítná žláza", desc: "Produkuje tyroxin, určuje rychlost metabolismu.", cx: 150, cy: 115 },
+      { id: 4, name: "Brzlík", desc: "Důležitý v dětství pro dozrávání bílých krvinek (imunita).", cx: 150, cy: 165 },
+      { id: 5, name: "Nadledviny", desc: "Kůra produkuje kortisol (dlouhodobý stres), dřeň adrenalin (náhlý stres).", cx: 120, cy: 235 },
+      { id: 6, name: "Slinivka břišní", desc: "Obsahuje Langerhansovy ostrůvky, produkuje inzulin a glukagon.", cx: 150, cy: 250 },
+      { id: 7, name: "Vaječníky (ženy)", desc: "Produkují estrogeny a progesteron, ovlivňují cyklus a těhotenství.", cx: 135, cy: 310 },
+      { id: 8, name: "Varlata (muži)", desc: "Produkují testosteron, ovlivňují sekundární pohlavní znaky.", cx: 155, cy: 375 }
+    ];
+
+    const HORMONES_LIST = [
+      { id: "h1", name: "Inzulin", source: "Slinivka břišní", func: "Udržuje / snižuje hladinu cukru v krvi" },
+      { id: "h2", name: "Glukagon", source: "Slinivka břišní", func: "Zvyšuje hladinu cukru v krvi při hladu" },
+      { id: "h3", name: "Adrenalin", source: "Nadledviny", func: "Rychlá reakce na stres (boj/útěk)" },
+      { id: "h4", name: "Kortisol", source: "Nadledviny", func: "Adaptace na dlouhodobou zátěž/stres" },
+      { id: "h5", name: "Tyroxin (T4)", source: "Štítná žláza", func: "Řízení rychlosti metabolismu v těle" },
+      { id: "h6", name: "Růstový hormon (ST)", source: "Hypofýza", func: "Stimuluje růst těla a dělení buněk" },
+      { id: "h7", name: "Oxytocin", source: "Hypothalamus", func: "Stahy dělohy při porodu a tvorba mateřských pout" },
+      { id: "h8", name: "Antidiuretický hormon", source: "Hypothalamus", func: "Zpětné vstřebávání vody v ledvinách" }
+    ];
+
+    const ORIGINAL_VENN_ITEMS = [
+      { id: 1, text: "Řízení pomocí elektrických impulsů a neurotransmiterů", cat: "N" },
+      { id: 2, text: "Signál se šíří velmi rychle (v milisekundách)", cat: "N" },
+      { id: 3, text: "Působí cíleně na konkrétní sval či buňku", cat: "N" },
+      { id: 4, text: "Regulační látky (poslové) jsou přenášeny krví", cat: "E" },
+      { id: 5, text: "Účinky nastupují pomaleji, ale jsou dlouhodobé", cat: "E" },
+      { id: 6, text: "Látky působí i ve velmi malém množství", cat: "E" },
+      { id: 7, text: "Udržuje vnitřní rovnováhu těla (homeostázu)", cat: "B" },
+      { id: 8, text: "Spolupracuje na celkovém řízení organismu", cat: "B" }
+    ];
+
+    const CLINICAL_CASES = [
+      {
+        id: 1,
+        title: "Případ č. 1: Extrémní žízeň",
+        desc: "Patnáctiletý student pociťuje neustálou žízeň, často chodí močit a cítí se unavený. Lékař mu naměřil vysokou hladinu glukózy v krvi.",
+        question: "Který hormon tělu chybí nebo na něj buňky nereagují?",
+        options: ["Glukagon", "Inzulin", "Adrenalin", "Kortisol"],
+        correct: "Inzulin",
+        feedback: "Správně! Nedostatek inzulinu (nebo rezistence na něj) způsobuje diabetes mellitus (cukrovku), kdy buňky nedokážou přijímat glukózu z krve."
+      },
+      {
+        id: 2,
+        title: "Případ č. 2: Útěk před psem",
+        desc: "Při cestě ze školy na tebe náhle vyštěkl velký pes. Okamžitě se ti rozbušilo srdce, zrychlil dech a tvé svaly se napjaly k rychlému úniku.",
+        question: "Který hormon způsobil tuto bleskovou stresovou reakci?",
+        options: ["Tyroxin", "Oxytocin", "Adrenalin", "Kortisol"],
+        correct: "Adrenalin",
+        feedback: "Přesně tak! Adrenalin z dřeně nadledvin připravuje tělo na reakci 'bojuj, nebo uteč' (zvýšení tepu, tlaku, uvolnění energie)."
+      },
+      {
+        id: 3,
+        title: "Případ č. 3: Trvalý stres ze zkoušek",
+        desc: "Studentka SŠ se již měsíc intenzivně stresuje kvůli maturitním zkouškám. Špatně spí, je náchylná k nemocem a pociťuje dlouhodobé vyčehrání.",
+        question: "Který hormon je zodpovědný za adaptaci na dlouhodobý stres?",
+        options: ["Kortisol", "Inzulin", "Růstový hormon", "ADH"],
+        correct: "Kortisol",
+        feedback: "Správně! Kortisol se tvoří v kůře nadledvin a pomáhá tělu zvládat dlouhodobou zátěž, ale dlouhodobě tlumí imunitní systém."
+      },
+      {
+        id: 4,
+        title: "Případ č. 4: Problém se zimomřivostí",
+        desc: "Pacientka si stěžuje na neustálou únavu, zimomřivost, přibývání na váze a zpomalené reflexy. Lékař diagnostikoval sníženou rychlost metabolismu.",
+        question: "Která žláza pravděpodobně produkuje nedostatečné množství hormonů?",
+        options: ["Slinivka břišní", "Brzlík", "Štítná žláza", "Hypofýza"],
+        correct: "Štítná žláza",
+        feedback: "Správně! Hormony štítné žlázy (tyroxin T4 a trijodtyronin T3) přímo kontrolují rychlost metabolismu v buňkách."
+      },
+      {
+        id: 5,
+        title: "Případ č. 5: Zpětná vazba v akci",
+        desc: "V těle došlo k poklesu hormonů štítné žlázy. Hypothalamus to zaregistruje a vyšle signál do hypofýzy.",
+        question: "Jak hypofýza zareaguje, aby stimulovala štítnou žlázu k vyšší tvorbě?",
+        options: [
+          "Vyloučí více tyreotropinu (TSH)",
+          "Zastaví vylučování oxytocinu",
+          "Začne vylučovat inzulin",
+          "Utlumí veškerou činnost"
+        ],
+        correct: "Vyloučí více tyreotropinu (TSH)",
+        feedback: "Perfektní! Jedná se o klasický princip negativní zpětné vazby. Vyšší hladina TSH přiměje štítnou žlázu tvořit více tyroxinu."
+      }
+    ];
+
     // React komponenta pro vykreslení Lucide ikon v čistém HTML prostředí
     const Icon = ({ name, className = "w-6 h-6" }) => {
       useEffect(() => {
@@ -67,7 +155,7 @@
         }
       }, [name]);
       
-      return <i data-lucide={name} class={className}></i>;
+      return <i data-lucide={name} className={className}></i>;
     };
 
     // Web Audio API pomocník pro zvukové efekty
@@ -131,16 +219,6 @@
       }
     };
 
-    // Pomocná funkce pro promíchání pole (Fisher-Yates)
-    const shuffleArray = (array) => {
-      const arr = [...array];
-      for (let i = arr.length - 1; i > 0; i--) {
-        const j = Math.floor(Math.random() * (i + 1));
-        [arr[i], arr[j]] = [arr[j], arr[i]];
-      }
-      return arr;
-    };
-
     function App() {
       const [screen, setScreen] = useState('intro'); // intro, game, result
       const [activeTab, setActiveTab] = useState(0); // 0: Anatomy, 1: Matching, 2: Venn, 3: Cases
@@ -168,98 +246,10 @@
       const [vennAnswers, setVennAnswers] = useState({}); // {itemId: 'N' | 'E' | 'B'}
       
       // 4. Úkol: Klinické diagnózy
-      const [cases] = useState([
-        {
-          id: 1,
-          title: "Případ č. 1: Extrémní žízeň",
-          desc: "Patnáctiletý student pociťuje neustálou žízeň, často chodí močit a cítí se unavený. Lékař mu naměřil vysokou hladinu glukózy v krvi.",
-          question: "Který hormon tělu chybí nebo na něj buňky nereagují?",
-          options: ["Glukagon", "Inzulin", "Adrenalin", "Kortisol"],
-          correct: "Inzulin",
-          feedback: "Správně! Nedostatek inzulinu (nebo rezistence na něj) způsobuje diabetes mellitus (cukrovku), kdy buňky nedokážou přijímat glukózu z krve."
-        },
-        {
-          id: 2,
-          title: "Případ č. 2: Útěk před psem",
-          desc: "Při cestě ze školy na tebe náhle vyštěkl velký pes. Okamžitě se ti rozbušilo srdce, zrychlil dech a tvé svaly se napjaly k rychlému úniku.",
-          question: "Který hormon způsobil tuto bleskovou stresovou reakci?",
-          options: ["Tyroxin", "Oxytocin", "Adrenalin", "Kortisol"],
-          correct: "Adrenalin",
-          feedback: "Přesně tak! Adrenalin z dřeně nadledvin připravuje tělo na reakci 'bojuj, nebo uteč' (zvýšení tepu, tlaku, uvolnění energie)."
-        },
-        {
-          id: 3,
-          title: "Případ č. 3: Trvalý stres ze zkoušek",
-          desc: "Studentka SŠ se již měsíc intenzivně stresuje kvůli maturitním zkouškám. Špatně spí, je náchylná k nemocem a pociťuje dlouhodobé vyčehrání.",
-          question: "Který hormon je zodpovědný za adaptaci na dlouhodobý stres?",
-          options: ["Kortisol", "Inzulin", "Růstový hormon", "ADH"],
-          correct: "Kortisol",
-          feedback: "Správně! Kortisol se tvoří v kůře nadledvin a pomáhá tělu zvládat dlouhodobou zátěž, ale dlouhodobě tlumí imunitní systém."
-        },
-        {
-          id: 4,
-          title: "Případ č. 4: Problém se zimomřivostí",
-          desc: "Pacientka si stěžuje na neustálou únavu, zimomřivost, přibývání na váze a zpomalené reflexy. Lékař diagnostikoval sníženou rychlost metabolismu.",
-          question: "Která žláza pravděpodobně produkuje nedostatečné množství hormonů?",
-          options: ["Slinivka břišní", "Brzlík", "Štítná žláza", "Hypofýza"],
-          correct: "Štítná žláza",
-          feedback: "Správně! Hormony štítné žlázy (tyroxin T4 a trijodtyronin T3) přímo kontrolují rychlost metabolismu v buňkách."
-        },
-        {
-          id: 5,
-          title: "Případ č. 5: Zpětná vazba v akci",
-          desc: "V těle došlo k poklesu hormonů štítné žlázy. Hypothalamus to zaregistruje a vyšle signál do hypofýzy.",
-          question: "Jak hypofýza zareaguje, aby stimulovala štítnou žlázu k vyšší tvorbě?",
-          options: [
-            "Vyloučí více tyreotropinu (TSH)",
-            "Zastaví vylučování oxytocinu",
-            "Začne vylučovat inzulin",
-            "Utlumí veškerou činnost"
-          ],
-          correct: "Vyloučí více tyreotropinu (TSH)",
-          feedback: "Perfektní! Jedná se o klasický princip negativní zpětné vazby. Vyšší hladina TSH přiměje štítnou žlázu tvořit více tyroxinu."
-        }
-      ]);
       const [currentCaseIndex, setCurrentCaseIndex] = useState(0);
       const [selectedCaseOption, setSelectedCaseOption] = useState(null);
       const [caseAnswered, setCaseAnswered] = useState(false);
       const [caseCorrect, setCaseCorrect] = useState(null);
-
-      // Anatomické žlázy a jejich poloha
-      const glands = [
-        { id: 1, name: "Hypothalamus", desc: "Řídí hypofýzu, spojuje nervovou a hormonální soustavu.", cx: 150, cy: 60 },
-        { id: 2, name: "Hypofýza", desc: "Podvěsek mozkový, 'řídící žláza žláz', tvoří např. růstový hormon či TSH.", cx: 162, cy: 75 },
-        { id: 3, name: "Štítná žláza", desc: "Produkuje tyroxin, určuje rychlost metabolismu.", cx: 150, cy: 115 },
-        { id: 4, name: "Brzlík", desc: "Důležitý v dětství pro dozrávání bílých krvinek (imunita).", cx: 150, cy: 165 },
-        { id: 5, name: "Nadledviny", desc: "Kůra produkuje kortisol (dlouhodobý stres), dřeň adrenalin (náhlý stres).", cx: 120, cy: 235 },
-        { id: 6, name: "Slinivka břišní", desc: "Obsahuje Langerhansovy ostrůvky, produkuje inzulin a glukagon.", cx: 150, cy: 250 },
-        { id: 7, name: "Vaječníky (ženy)", desc: "Produkují estrogeny a progesteron, ovlivňují cyklus a těhotenství.", cx: 135, cy: 310 },
-        { id: 8, name: "Varlata (muži)", desc: "Produkují testosteron, ovlivňují sekundární pohlavní znaky.", cx: 155, cy: 375 }
-      ];
-
-      // Seznam hormonů pro spojovací hru
-      const hormonesList = [
-        { id: "h1", name: "Inzulin", source: "Slinivka břišní", func: "Udržuje / snižuje hladinu cukru v krvi" },
-        { id: "h2", name: "Glukagon", source: "Slinivka břišní", func: "Zvyšuje hladinu cukru v krvi při hladu" },
-        { id: "h3", name: "Adrenalin", source: "Nadledviny", func: "Rychlá reakce na stres (boj/útěk)" },
-        { id: "h4", name: "Kortisol", source: "Nadledviny", func: "Adaptace na dlouhodobou zátěž/stres" },
-        { id: "h5", name: "Tyroxin (T4)", source: "Štítná žláza", func: "Řízení rychlosti metabolismu v těle" },
-        { id: "h6", name: "Růstový hormon (ST)", source: "Hypofýza", func: "Stimuluje růst těla a dělení buněk" },
-        { id: "h7", name: "Oxytocin", source: "Hypothalamus", func: "Stahy dělohy při porodu a tvorba mateřských pout" },
-        { id: "h8", name: "Antidiuretický hormon", source: "Hypothalamus", func: "Zpětné vstřebávání vody v ledvinách" }
-      ];
-
-      // Tvrzení k porovnání soustav
-      const originalVennItems = [
-        { id: 1, text: "Řízení pomocí elektrických impulsů a neurotransmiterů", cat: "N" },
-        { id: 2, text: "Signál se šíří velmi rychle (v milisekundách)", cat: "N" },
-        { id: 3, text: "Působí cíleně na konkrétní sval či buňku", cat: "N" },
-        { id: 4, text: "Regulační látky (poslové) jsou přenášeny krví", cat: "E" },
-        { id: 5, text: "Účinky nastupují pomaleji, ale jsou dlouhodobé", cat: "E" },
-        { id: 6, text: "Látky působí i ve velmi malém množství", cat: "E" },
-        { id: 7, text: "Udržuje vnitřní rovnováhu těla (homeostázu)", cat: "B" },
-        { id: 8, text: "Spolupracuje na celkovém řízení organismu", cat: "B" }
-      ];
 
       // Odpočet času
       useEffect(() => {
@@ -284,12 +274,12 @@
         setAnatomyAnswers({});
         
         // 1. Zamíchání anatomického pořadí hledaných žláz
-        const shuffledAnatomy = shuffleArray(glands.map(g => g.id));
+        const shuffledAnatomy = shuffleArray(GLANDS.map(g => g.id));
         setShuffledAnatomyOrder(shuffledAnatomy);
         setCurrentAnatomyIndex(0);
 
         // 2. Nezávislé zamíchání prvků v laboratoři (Hormony a Funkce)
-        setShuffledHormones(shuffleArray(hormonesList));
+        setShuffledHormones(shuffleArray(HORMONES_LIST));
         setShuffledGlands(shuffleArray([
           "Slinivka břišní", 
           "Nadledviny", 
@@ -297,7 +287,7 @@
           "Hypofýza", 
           "Hypothalamus"
         ]));
-        setShuffledFunctions(shuffleArray(hormonesList.map(h => h.func)));
+        setShuffledFunctions(shuffleArray(HORMONES_LIST.map(h => h.func)));
         
         setMatchedHormones([]);
         setSelectedHormone(null);
@@ -305,7 +295,7 @@
         setSelectedFunction(null);
 
         // 3. Zamíchání výroků ve Vennově diagramu
-        setShuffledVennItems(shuffleArray(originalVennItems));
+        setShuffledVennItems(shuffleArray(ORIGINAL_VENN_ITEMS));
         setVennAnswers({});
 
         // 4. Reset lékařských případů
@@ -409,7 +399,7 @@
         playSound('click');
         setSelectedCaseOption(option);
         setCaseAnswered(true);
-        const isCorrect = option === cases[currentCaseIndex].correct;
+        const isCorrect = option === CLINICAL_CASES[currentCaseIndex].correct;
         setCaseCorrect(isCorrect);
         if (isCorrect) {
           playSound('success');
@@ -421,7 +411,7 @@
 
       const handleNextCase = () => {
         playSound('click');
-        if (currentCaseIndex < cases.length - 1) {
+        if (currentCaseIndex < CLINICAL_CASES.length - 1) {
           setCurrentCaseIndex(prev => prev + 1);
           setSelectedCaseOption(null);
           setCaseAnswered(false);
@@ -448,11 +438,11 @@
       };
 
       const isFunctionMatched = (funcText) => {
-        return hormonesList.some(h => h.func === funcText && matchedHormones.includes(h.name));
+        return HORMONES_LIST.some(h => h.func === funcText && matchedHormones.includes(h.name));
       };
 
       const currentAnatomyTargetId = shuffledAnatomyOrder[currentAnatomyIndex];
-      const currentAnatomyTargetGland = glands.find(g => g.id === currentAnatomyTargetId);
+      const currentAnatomyTargetGland = GLANDS.find(g => g.id === currentAnatomyTargetId);
 
       return (
         <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans select-none selection:bg-teal-500 selection:text-white flex-grow">
@@ -670,7 +660,7 @@
                             <circle cx="138" cy="45" r="2" fill="#475569" />
                             <circle cx="162" cy="45" r="2" fill="#475569" />
 
-                            {glands.map((g) => {
+                            {GLANDS.map((g) => {
                               const answered = anatomyAnswers[g.id] !== undefined;
                               const isCorrect = anatomyAnswers[g.id] === true;
                               
@@ -848,7 +838,7 @@
                         </div>
                       </div>
 
-                      {matchedHormones.length === hormonesList.length && (
+                      {matchedHormones.length === HORMONES_LIST.length && (
                         <div className="mt-6 p-4 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl text-center">
                           <p className="text-emerald-400 font-bold mb-2 flex items-center justify-center gap-2">
                             <Icon name="check-circle" className="w-5 h-5" /> Výborně! Všechny trojice jsou správně spárovány.
@@ -990,7 +980,7 @@
                             </div>
                           </div>
 
-                          {Object.keys(vennAnswers).length === originalVennItems.length && (
+                          {Object.keys(vennAnswers).length === ORIGINAL_VENN_ITEMS.length && (
                             <div className="mt-6 pt-4 border-t border-slate-800 text-center">
                               <button 
                                 onClick={() => { playSound('click'); setActiveTab(3); }} 
@@ -1019,20 +1009,20 @@
                       {/* Karta klinického případu */}
                       <div className="bg-slate-900 rounded-3xl p-6 border border-slate-700 relative overflow-hidden">
                         <div className="absolute top-0 right-0 px-4 py-1.5 bg-teal-500/15 text-teal-400 text-xs font-bold rounded-bl-xl border-l border-b border-slate-700">
-                          Případ {currentCaseIndex + 1} z {cases.length}
+                          Případ {currentCaseIndex + 1} z {CLINICAL_CASES.length}
                         </div>
 
-                        <h4 className="text-lg font-bold text-white mb-2">{cases[currentCaseIndex].title}</h4>
+                        <h4 className="text-lg font-bold text-white mb-2">{CLINICAL_CASES[currentCaseIndex].title}</h4>
                         <p className="text-slate-300 text-sm leading-relaxed mb-6 bg-slate-950/50 p-4 rounded-xl border border-slate-800 italic">
-                          " {cases[currentCaseIndex].desc} "
+                          " {CLINICAL_CASES[currentCaseIndex].desc} "
                         </p>
 
-                        <p className="text-sm font-bold text-slate-100 mb-3">{cases[currentCaseIndex].question}</p>
+                        <p className="text-sm font-bold text-slate-100 mb-3">{CLINICAL_CASES[currentCaseIndex].question}</p>
                         
                         <div className="grid sm:grid-cols-2 gap-3 mb-6">
-                          {cases[currentCaseIndex].options.map((opt, idx) => {
+                          {CLINICAL_CASES[currentCaseIndex].options.map((opt, idx) => {
                             const isSelected = selectedCaseOption === opt;
-                            const isCorrectAnswer = opt === cases[currentCaseIndex].correct;
+                            const isCorrectAnswer = opt === CLINICAL_CASES[currentCaseIndex].correct;
                             
                             let btnStyle = "bg-slate-800/80 border-slate-700 hover:bg-slate-800 hover:border-slate-600 text-slate-200";
                             if (caseAnswered) {
@@ -1074,7 +1064,7 @@
                                   {caseCorrect ? 'Vynikající diagnóza!' : 'Diagnóza nebyla správná.'}
                                 </p>
                                 <p className="text-xs text-slate-300 mt-1 leading-relaxed">
-                                  {cases[currentCaseIndex].feedback}
+                                  {CLINICAL_CASES[currentCaseIndex].feedback}
                                 </p>
                               </div>
                             </div>
@@ -1085,7 +1075,7 @@
                                 className="inline-flex items-center gap-1.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold px-5 py-2 rounded-lg text-xs transition-colors"
                               >
                                 <span>
-                                  {currentCaseIndex < cases.length - 1 ? 'Další diagnóza' : 'Ukončit a vyhodnotit trenažér'}
+                                  {currentCaseIndex < CLINICAL_CASES.length - 1 ? 'Další diagnóza' : 'Ukončit a vyhodnotit trenažér'}
                                 </span>
                                 <Icon name="arrow-right" className="w-3.5 h-3.5" />
                               </button>
