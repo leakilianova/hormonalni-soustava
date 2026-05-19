@@ -1,25 +1,285 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Hormonální Trenažér SŠ</title>
-    <!-- Načtení Reactu a Babelu přes CDN -->
-    <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
-    <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
-    <!-- Načtení Tailwind CSS pro stylování -->
-    <script src="https://cdn.tailwindcss.com"></script>
-    <!-- Načtení ikon Lucide -->
-    <script src="https://unpkg.com/lucide@latest"></script>
-</head>
-<body class="bg-slate-900 text-slate-100">
-    <div id="root"></div>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Hormonální trenažér</title>
 
-    <script type="text/babel">
-        // Sem vložte kompletní kód z Canvasu počínaje řádkem:
-        // const playSound = (type) => { ... } až po samotný konec souboru (export default function App() { ... })
-        // POZNÁMKA: Pouze odstraňte řádky s "import ... from ..." na úplném začátku kódu z Canvasu.
-    </script>
+  <script src="https://cdn.tailwindcss.com"></script>
+
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+
+</head>
+
+<body class="bg-slate-900 text-white">
+
+<div id="root"></div>
+
+<script type="text/babel">
+
+const { useState, useEffect } = React;
+
+function App() {
+
+  const [score, setScore] = useState(0);
+  const [timeLeft, setTimeLeft] = useState(300);
+  const [started, setStarted] = useState(false);
+  const [finished, setFinished] = useState(false);
+
+  const questions = [
+    {
+      q: "Který hormon snižuje hladinu cukru v krvi?",
+      options: ["Adrenalin", "Inzulin", "Kortisol", "Tyroxin"],
+      correct: "Inzulin"
+    },
+    {
+      q: "Která žláza produkuje tyroxin?",
+      options: ["Hypofýza", "Nadledviny", "Štítná žláza", "Slinivka"],
+      correct: "Štítná žláza"
+    },
+    {
+      q: "Který hormon se uvolňuje při náhlém stresu?",
+      options: ["Oxytocin", "ADH", "Adrenalin", "Glukagon"],
+      correct: "Adrenalin"
+    },
+    {
+      q: "Který hormon pomáhá při dlouhodobém stresu?",
+      options: ["Kortisol", "Inzulin", "Tyroxin", "STH"],
+      correct: "Kortisol"
+    },
+    {
+      q: "Která žláza je označována jako řídící žláza?",
+      options: ["Hypofýza", "Štítná žláza", "Brzlík", "Slinivka"],
+      correct: "Hypofýza"
+    }
+  ];
+
+  const [currentQuestion, setCurrentQuestion] = useState(0);
+  const [selected, setSelected] = useState(null);
+
+  useEffect(() => {
+    let timer;
+
+    if (started && !finished && timeLeft > 0) {
+      timer = setInterval(() => {
+        setTimeLeft(prev => prev - 1);
+      }, 1000);
+    }
+
+    if (timeLeft === 0) {
+      setFinished(true);
+    }
+
+    return () => clearInterval(timer);
+  }, [started, finished, timeLeft]);
+
+  function startGame() {
+    setStarted(true);
+  }
+
+  function answerQuestion(option) {
+
+    if (selected !== null) return;
+
+    setSelected(option);
+
+    if (option === questions[currentQuestion].correct) {
+      setScore(score + 20);
+    }
+
+    setTimeout(() => {
+
+      if (currentQuestion + 1 < questions.length) {
+        setCurrentQuestion(currentQuestion + 1);
+        setSelected(null);
+      } else {
+        setFinished(true);
+      }
+
+    }, 1200);
+  }
+
+  function restartGame() {
+    setScore(0);
+    setTimeLeft(300);
+    setStarted(false);
+    setFinished(false);
+    setCurrentQuestion(0);
+    setSelected(null);
+  }
+
+  function formatTime(seconds) {
+    const m = Math.floor(seconds / 60);
+    const s = seconds % 60;
+
+    return `${m}:${s < 10 ? "0" : ""}${s}`;
+  }
+
+  if (!started) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="bg-slate-800 p-8 rounded-3xl max-w-2xl w-full border border-slate-700 shadow-2xl text-center">
+
+          <h1 className="text-4xl font-black mb-4 text-teal-400">
+            Hormonální trenažér
+          </h1>
+
+          <p className="text-slate-300 mb-8 text-lg">
+            Interaktivní procvičování hormonální soustavy pro studenty SŠ.
+          </p>
+
+          <div className="bg-slate-900 rounded-2xl p-6 mb-8 text-left">
+            <h2 className="font-bold text-xl mb-4">Co tě čeká?</h2>
+
+            <ul className="space-y-2 text-slate-300">
+              <li>• hormony a jejich funkce</li>
+              <li>• endokrinní žlázy</li>
+              <li>• stresová reakce</li>
+              <li>• metabolismus</li>
+              <li>• klinické situace</li>
+            </ul>
+          </div>
+
+          <button
+            onClick={startGame}
+            className="bg-teal-500 hover:bg-teal-400 text-slate-900 font-black px-8 py-4 rounded-2xl text-xl transition"
+          >
+            Spustit hru
+          </button>
+
+        </div>
+      </div>
+    );
+  }
+
+  if (finished) {
+    return (
+      <div className="min-h-screen flex items-center justify-center p-6">
+        <div className="bg-slate-800 p-8 rounded-3xl max-w-2xl w-full border border-slate-700 shadow-2xl text-center">
+
+          <h1 className="text-4xl font-black text-teal-400 mb-4">
+            Konec hry
+          </h1>
+
+          <p className="text-6xl font-black mb-4">
+            {score}
+          </p>
+
+          <p className="text-slate-300 mb-8">
+            bodů
+          </p>
+
+          <button
+            onClick={restartGame}
+            className="bg-teal-500 hover:bg-teal-400 text-slate-900 font-black px-8 py-4 rounded-2xl text-xl transition"
+          >
+            Hrát znovu
+          </button>
+
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen p-6">
+
+      <div className="max-w-3xl mx-auto">
+
+        <div className="bg-slate-800 rounded-3xl p-6 border border-slate-700 shadow-2xl">
+
+          <div className="flex justify-between items-center mb-8">
+
+            <div>
+              <h1 className="text-2xl font-black text-teal-400">
+                Hormonální trenažér
+              </h1>
+
+              <p className="text-slate-400">
+                Otázka {currentQuestion + 1} z {questions.length}
+              </p>
+            </div>
+
+            <div className="text-right">
+              <p className="text-slate-400 text-sm">Čas</p>
+              <p className="text-2xl font-black">
+                {formatTime(timeLeft)}
+              </p>
+            </div>
+
+          </div>
+
+          <div className="mb-8">
+
+            <h2 className="text-2xl font-bold mb-6">
+              {questions[currentQuestion].q}
+            </h2>
+
+            <div className="space-y-3">
+
+              {questions[currentQuestion].options.map((option, index) => {
+
+                let style =
+                  "bg-slate-900 hover:bg-slate-700 border-slate-700";
+
+                if (selected !== null) {
+
+                  if (option === questions[currentQuestion].correct) {
+                    style = "bg-green-600 border-green-400";
+                  }
+                  else if (option === selected) {
+                    style = "bg-red-600 border-red-400";
+                  }
+                }
+
+                return (
+                  <button
+                    key={index}
+                    onClick={() => answerQuestion(option)}
+                    className={`w-full p-4 rounded-2xl border text-left font-semibold transition ${style}`}
+                  >
+                    {option}
+                  </button>
+                );
+              })}
+
+            </div>
+
+          </div>
+
+          <div className="flex justify-between items-center">
+
+            <div>
+              <p className="text-slate-400 text-sm">Skóre</p>
+              <p className="text-3xl font-black text-teal-400">
+                {score}
+              </p>
+            </div>
+
+            <div className="w-48 bg-slate-900 rounded-full h-4 overflow-hidden">
+              <div
+                className="bg-teal-500 h-4 transition-all"
+                style={{
+                  width: `${((currentQuestion + 1) / questions.length) * 100}%`
+                }}
+              ></div>
+            </div>
+
+          </div>
+
+        </div>
+
+      </div>
+
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+
+</script>
+
 </body>
 </html>
