@@ -1,285 +1,1178 @@
 <!DOCTYPE html>
 <html lang="cs">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
-  <title>Hormonální trenažér</title>
-
-  <script src="https://cdn.tailwindcss.com"></script>
-
-  <script crossorigin src="https://unpkg.com/react@18/umd/react.development.js"></script>
-  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.development.js"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Hormonální Trenažér SŠ</title>
+  
+  <!-- Načtení Reactu a ReactDOM z CDN -->
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js" crossorigin></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js" crossorigin></script>
+  
+  <!-- Načtení Babelu pro kompilaci JSX v prohlížeči -->
   <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  
+  <!-- Načtení Tailwind CSS pro stylování -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
+  <!-- Načtení Lucide ikon přes CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  
+  <style>
+    /* Vlastní doplňující styly pro plynulé animace a font */
+    @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;700&display=swap');
+    
+    body {
+      font-family: 'Inter', sans-serif;
+      background-color: #0f172a;
+    }
+    
+    .font-mono {
+      font-family: 'JetBrains+Mono', monospace;
+    }
 
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(8px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes scaleIn {
+      from { opacity: 0; transform: scale(0.97); }
+      to { opacity: 1; transform: scale(1); }
+    }
+
+    .animate-fadeIn {
+      animation: fadeIn 0.3s ease-out forwards;
+    }
+
+    .animate-scaleIn {
+      animation: scaleIn 0.25s ease-out forwards;
+    }
+  </style>
 </head>
+<body class="bg-slate-900 text-slate-100 min-h-screen flex flex-col">
 
-<body class="bg-slate-900 text-white">
+  <!-- Hlavní kontejner pro React aplikaci -->
+  <div id="root" class="flex flex-col flex-grow"></div>
 
-<div id="root"></div>
+  <script type="text/babel">
+    const { useState, useEffect } = React;
 
-<script type="text/babel">
+    // React komponenta pro vykreslení Lucide ikon v čistém HTML prostředí
+    const Icon = ({ name, className = "w-6 h-6" }) => {
+      useEffect(() => {
+        // Inicializace nově vykreslených ikon v DOM
+        if (window.lucide) {
+          window.lucide.createIcons();
+        }
+      }, [name]);
+      
+      return <i data-lucide={name} class={className}></i>;
+    };
 
-const { useState, useEffect } = React;
-
-function App() {
-
-  const [score, setScore] = useState(0);
-  const [timeLeft, setTimeLeft] = useState(300);
-  const [started, setStarted] = useState(false);
-  const [finished, setFinished] = useState(false);
-
-  const questions = [
-    {
-      q: "Který hormon snižuje hladinu cukru v krvi?",
-      options: ["Adrenalin", "Inzulin", "Kortisol", "Tyroxin"],
-      correct: "Inzulin"
-    },
-    {
-      q: "Která žláza produkuje tyroxin?",
-      options: ["Hypofýza", "Nadledviny", "Štítná žláza", "Slinivka"],
-      correct: "Štítná žláza"
-    },
-    {
-      q: "Který hormon se uvolňuje při náhlém stresu?",
-      options: ["Oxytocin", "ADH", "Adrenalin", "Glukagon"],
-      correct: "Adrenalin"
-    },
-    {
-      q: "Který hormon pomáhá při dlouhodobém stresu?",
-      options: ["Kortisol", "Inzulin", "Tyroxin", "STH"],
-      correct: "Kortisol"
-    },
-    {
-      q: "Která žláza je označována jako řídící žláza?",
-      options: ["Hypofýza", "Štítná žláza", "Brzlík", "Slinivka"],
-      correct: "Hypofýza"
-    }
-  ];
-
-  const [currentQuestion, setCurrentQuestion] = useState(0);
-  const [selected, setSelected] = useState(null);
-
-  useEffect(() => {
-    let timer;
-
-    if (started && !finished && timeLeft > 0) {
-      timer = setInterval(() => {
-        setTimeLeft(prev => prev - 1);
-      }, 1000);
-    }
-
-    if (timeLeft === 0) {
-      setFinished(true);
-    }
-
-    return () => clearInterval(timer);
-  }, [started, finished, timeLeft]);
-
-  function startGame() {
-    setStarted(true);
-  }
-
-  function answerQuestion(option) {
-
-    if (selected !== null) return;
-
-    setSelected(option);
-
-    if (option === questions[currentQuestion].correct) {
-      setScore(score + 20);
-    }
-
-    setTimeout(() => {
-
-      if (currentQuestion + 1 < questions.length) {
-        setCurrentQuestion(currentQuestion + 1);
-        setSelected(null);
-      } else {
-        setFinished(true);
+    // Web Audio API pomocník pro zvukové efekty
+    const playSound = (type) => {
+      try {
+        const AudioContext = window.AudioContext || window.webkitAudioContext;
+        if (!AudioContext) return;
+        const ctx = new AudioContext();
+        
+        if (type === 'success') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sine';
+          osc.frequency.setValueAtTime(440, ctx.currentTime);
+          osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.15);
+          gain.gain.setValueAtTime(0.1, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.2);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.2);
+        } else if (type === 'error') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'sawtooth';
+          osc.frequency.setValueAtTime(220, ctx.currentTime);
+          osc.frequency.linearRampToValueAtTime(110, ctx.currentTime + 0.2);
+          gain.gain.setValueAtTime(0.15, ctx.currentTime);
+          gain.gain.linearRampToValueAtTime(0.01, ctx.currentTime + 0.25);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.25);
+        } else if (type === 'click') {
+          const osc = ctx.createOscillator();
+          const gain = ctx.createGain();
+          osc.connect(gain);
+          gain.connect(ctx.destination);
+          osc.type = 'triangle';
+          osc.frequency.setValueAtTime(600, ctx.currentTime);
+          gain.gain.setValueAtTime(0.05, ctx.currentTime);
+          gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + 0.05);
+          osc.start();
+          osc.stop(ctx.currentTime + 0.05);
+        } else if (type === 'victory') {
+          const notes = [261.63, 329.63, 392.00, 523.25];
+          notes.forEach((freq, index) => {
+            const osc = ctx.createOscillator();
+            const gain = ctx.createGain();
+            osc.connect(gain);
+            gain.connect(ctx.destination);
+            osc.frequency.setValueAtTime(freq, ctx.currentTime + index * 0.1);
+            gain.gain.setValueAtTime(0.1, ctx.currentTime + index * 0.1);
+            gain.gain.exponentialRampToValueAtTime(0.001, ctx.currentTime + index * 0.1 + 0.2);
+            osc.start(ctx.currentTime + index * 0.1);
+            osc.stop(ctx.currentTime + index * 0.1 + 0.2);
+          });
+        }
+      } catch (e) {
+        // nepodporováno nebo blokováno prohlížečem
       }
+    };
 
-    }, 1200);
-  }
+    // Pomocná funkce pro promíchání pole (Fisher-Yates)
+    const shuffleArray = (array) => {
+      const arr = [...array];
+      for (let i = arr.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [arr[i], arr[j]] = [arr[j], arr[i]];
+      }
+      return arr;
+    };
 
-  function restartGame() {
-    setScore(0);
-    setTimeLeft(300);
-    setStarted(false);
-    setFinished(false);
-    setCurrentQuestion(0);
-    setSelected(null);
-  }
+    function App() {
+      const [screen, setScreen] = useState('intro'); // intro, game, result
+      const [activeTab, setActiveTab] = useState(0); // 0: Anatomy, 1: Matching, 2: Venn, 3: Cases
+      const [score, setScore] = useState(0);
+      const [timeLeft, setTimeLeft] = useState(300); // 5 minut v sekundách
+      const [timerRunning, setTimerRunning] = useState(false);
+      
+      // 1. Úkol: Anatomie - stavy (promíchané hledání, prázdné body bez pohybu)
+      const [shuffledAnatomyOrder, setShuffledAnatomyOrder] = useState([]); 
+      const [currentAnatomyIndex, setCurrentAnatomyIndex] = useState(0); 
+      const [anatomyAnswers, setAnatomyAnswers] = useState({}); // {glandId: true/false}
+      
+      // 2. Úkol: Spojování (3-fázové spojení)
+      const [shuffledHormones, setShuffledHormones] = useState([]);
+      const [shuffledGlands, setShuffledGlands] = useState([]);
+      const [shuffledFunctions, setShuffledFunctions] = useState([]);
+      
+      const [selectedHormone, setSelectedHormone] = useState(null); 
+      const [selectedGland, setSelectedGland] = useState(null); 
+      const [selectedFunction, setSelectedFunction] = useState(null); 
+      const [matchedHormones, setMatchedHormones] = useState([]); // spárované hormony
 
-  function formatTime(seconds) {
-    const m = Math.floor(seconds / 60);
-    const s = seconds % 60;
+      // 3. Úkol: Třídění (promíchané výroky)
+      const [shuffledVennItems, setShuffledVennItems] = useState([]);
+      const [vennAnswers, setVennAnswers] = useState({}); // {itemId: 'N' | 'E' | 'B'}
+      
+      // 4. Úkol: Klinické diagnózy
+      const [cases] = useState([
+        {
+          id: 1,
+          title: "Případ č. 1: Extrémní žízeň",
+          desc: "Patnáctiletý student pociťuje neustálou žízeň, často chodí močit a cítí se unavený. Lékař mu naměřil vysokou hladinu glukózy v krvi.",
+          question: "Který hormon tělu chybí nebo na něj buňky nereagují?",
+          options: ["Glukagon", "Inzulin", "Adrenalin", "Kortisol"],
+          correct: "Inzulin",
+          feedback: "Správně! Nedostatek inzulinu (nebo rezistence na něj) způsobuje diabetes mellitus (cukrovku), kdy buňky nedokážou přijímat glukózu z krve."
+        },
+        {
+          id: 2,
+          title: "Případ č. 2: Útěk před psem",
+          desc: "Při cestě ze školy na tebe náhle vyštěkl velký pes. Okamžitě se ti rozbušilo srdce, zrychlil dech a tvé svaly se napjaly k rychlému úniku.",
+          question: "Který hormon způsobil tuto bleskovou stresovou reakci?",
+          options: ["Tyroxin", "Oxytocin", "Adrenalin", "Kortisol"],
+          correct: "Adrenalin",
+          feedback: "Přesně tak! Adrenalin z dřeně nadledvin připravuje tělo na reakci 'bojuj, nebo uteč' (zvýšení tepu, tlaku, uvolnění energie)."
+        },
+        {
+          id: 3,
+          title: "Případ č. 3: Trvalý stres ze zkoušek",
+          desc: "Studentka SŠ se již měsíc intenzivně stresuje kvůli maturitním zkouškám. Špatně spí, je náchylná k nemocem a pociťuje dlouhodobé vyčehrání.",
+          question: "Který hormon je zodpovědný za adaptaci na dlouhodobý stres?",
+          options: ["Kortisol", "Inzulin", "Růstový hormon", "ADH"],
+          correct: "Kortisol",
+          feedback: "Správně! Kortisol se tvoří v kůře nadledvin a pomáhá tělu zvládat dlouhodobou zátěž, ale dlouhodobě tlumí imunitní systém."
+        },
+        {
+          id: 4,
+          title: "Případ č. 4: Problém se zimomřivostí",
+          desc: "Pacientka si stěžuje na neustálou únavu, zimomřivost, přibývání na váze a zpomalené reflexy. Lékař diagnostikoval sníženou rychlost metabolismu.",
+          question: "Která žláza pravděpodobně produkuje nedostatečné množství hormonů?",
+          options: ["Slinivka břišní", "Brzlík", "Štítná žláza", "Hypofýza"],
+          correct: "Štítná žláza",
+          feedback: "Správně! Hormony štítné žlázy (tyroxin T4 a trijodtyronin T3) přímo kontrolují rychlost metabolismu v buňkách."
+        },
+        {
+          id: 5,
+          title: "Případ č. 5: Zpětná vazba v akci",
+          desc: "V těle došlo k poklesu hormonů štítné žlázy. Hypothalamus to zaregistruje a vyšle signál do hypofýzy.",
+          question: "Jak hypofýza zareaguje, aby stimulovala štítnou žlázu k vyšší tvorbě?",
+          options: [
+            "Vyloučí více tyreotropinu (TSH)",
+            "Zastaví vylučování oxytocinu",
+            "Začne vylučovat inzulin",
+            "Utlumí veškerou činnost"
+          ],
+          correct: "Vyloučí více tyreotropinu (TSH)",
+          feedback: "Perfektní! Jedná se o klasický princip negativní zpětné vazby. Vyšší hladina TSH přiměje štítnou žlázu tvořit více tyroxinu."
+        }
+      ]);
+      const [currentCaseIndex, setCurrentCaseIndex] = useState(0);
+      const [selectedCaseOption, setSelectedCaseOption] = useState(null);
+      const [caseAnswered, setCaseAnswered] = useState(false);
+      const [caseCorrect, setCaseCorrect] = useState(null);
 
-    return `${m}:${s < 10 ? "0" : ""}${s}`;
-  }
+      // Anatomické žlázy a jejich poloha
+      const glands = [
+        { id: 1, name: "Hypothalamus", desc: "Řídí hypofýzu, spojuje nervovou a hormonální soustavu.", cx: 150, cy: 60 },
+        { id: 2, name: "Hypofýza", desc: "Podvěsek mozkový, 'řídící žláza žláz', tvoří např. růstový hormon či TSH.", cx: 162, cy: 75 },
+        { id: 3, name: "Štítná žláza", desc: "Produkuje tyroxin, určuje rychlost metabolismu.", cx: 150, cy: 115 },
+        { id: 4, name: "Brzlík", desc: "Důležitý v dětství pro dozrávání bílých krvinek (imunita).", cx: 150, cy: 165 },
+        { id: 5, name: "Nadledviny", desc: "Kůra produkuje kortisol (dlouhodobý stres), dřeň adrenalin (náhlý stres).", cx: 120, cy: 235 },
+        { id: 6, name: "Slinivka břišní", desc: "Obsahuje Langerhansovy ostrůvky, produkuje inzulin a glukagon.", cx: 150, cy: 250 },
+        { id: 7, name: "Vaječníky (ženy)", desc: "Produkují estrogeny a progesteron, ovlivňují cyklus a těhotenství.", cx: 135, cy: 310 },
+        { id: 8, name: "Varlata (muži)", desc: "Produkují testosteron, ovlivňují sekundární pohlavní znaky.", cx: 155, cy: 375 }
+      ];
 
-  if (!started) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="bg-slate-800 p-8 rounded-3xl max-w-2xl w-full border border-slate-700 shadow-2xl text-center">
+      // Seznam hormonů pro spojovací hru
+      const hormonesList = [
+        { id: "h1", name: "Inzulin", source: "Slinivka břišní", func: "Udržuje / snižuje hladinu cukru v krvi" },
+        { id: "h2", name: "Glukagon", source: "Slinivka břišní", func: "Zvyšuje hladinu cukru v krvi při hladu" },
+        { id: "h3", name: "Adrenalin", source: "Nadledviny", func: "Rychlá reakce na stres (boj/útěk)" },
+        { id: "h4", name: "Kortisol", source: "Nadledviny", func: "Adaptace na dlouhodobou zátěž/stres" },
+        { id: "h5", name: "Tyroxin (T4)", source: "Štítná žláza", func: "Řízení rychlosti metabolismu v těle" },
+        { id: "h6", name: "Růstový hormon (ST)", source: "Hypofýza", func: "Stimuluje růst těla a dělení buněk" },
+        { id: "h7", name: "Oxytocin", source: "Hypothalamus", func: "Stahy dělohy při porodu a tvorba mateřských pout" },
+        { id: "h8", name: "Antidiuretický hormon", source: "Hypothalamus", func: "Zpětné vstřebávání vody v ledvinách" }
+      ];
 
-          <h1 className="text-4xl font-black mb-4 text-teal-400">
-            Hormonální trenažér
-          </h1>
+      // Tvrzení k porovnání soustav
+      const originalVennItems = [
+        { id: 1, text: "Řízení pomocí elektrických impulsů a neurotransmiterů", cat: "N" },
+        { id: 2, text: "Signál se šíří velmi rychle (v milisekundách)", cat: "N" },
+        { id: 3, text: "Působí cíleně na konkrétní sval či buňku", cat: "N" },
+        { id: 4, text: "Regulační látky (poslové) jsou přenášeny krví", cat: "E" },
+        { id: 5, text: "Účinky nastupují pomaleji, ale jsou dlouhodobé", cat: "E" },
+        { id: 6, text: "Látky působí i ve velmi malém množství", cat: "E" },
+        { id: 7, text: "Udržuje vnitřní rovnováhu těla (homeostázu)", cat: "B" },
+        { id: 8, text: "Spolupracuje na celkovém řízení organismu", cat: "B" }
+      ];
 
-          <p className="text-slate-300 mb-8 text-lg">
-            Interaktivní procvičování hormonální soustavy pro studenty SŠ.
-          </p>
+      // Odpočet času
+      useEffect(() => {
+        let interval = null;
+        if (timerRunning && timeLeft > 0) {
+          interval = setInterval(() => {
+            setTimeLeft((prev) => prev - 1);
+          }, 1000);
+        } else if (timeLeft === 0) {
+          setScreen('result');
+          setTimerRunning(false);
+          playSound('error');
+        }
+        return () => clearInterval(interval);
+      }, [timerRunning, timeLeft]);
 
-          <div className="bg-slate-900 rounded-2xl p-6 mb-8 text-left">
-            <h2 className="font-bold text-xl mb-4">Co tě čeká?</h2>
+      // Spuštění a restartování hry se zamícháním prvků
+      const startGame = () => {
+        playSound('click');
+        setScore(0);
+        setTimeLeft(300);
+        setAnatomyAnswers({});
+        
+        // 1. Zamíchání anatomického pořadí hledaných žláz
+        const shuffledAnatomy = shuffleArray(glands.map(g => g.id));
+        setShuffledAnatomyOrder(shuffledAnatomy);
+        setCurrentAnatomyIndex(0);
 
-            <ul className="space-y-2 text-slate-300">
-              <li>• hormony a jejich funkce</li>
-              <li>• endokrinní žlázy</li>
-              <li>• stresová reakce</li>
-              <li>• metabolismus</li>
-              <li>• klinické situace</li>
-            </ul>
-          </div>
+        // 2. Nezávislé zamíchání prvků v laboratoři (Hormony a Funkce)
+        setShuffledHormones(shuffleArray(hormonesList));
+        setShuffledGlands(shuffleArray([
+          "Slinivka břišní", 
+          "Nadledviny", 
+          "Štítná žláza", 
+          "Hypofýza", 
+          "Hypothalamus"
+        ]));
+        setShuffledFunctions(shuffleArray(hormonesList.map(h => h.func)));
+        
+        setMatchedHormones([]);
+        setSelectedHormone(null);
+        setSelectedGland(null);
+        setSelectedFunction(null);
 
-          <button
-            onClick={startGame}
-            className="bg-teal-500 hover:bg-teal-400 text-slate-900 font-black px-8 py-4 rounded-2xl text-xl transition"
-          >
-            Spustit hru
-          </button>
+        // 3. Zamíchání výroků ve Vennově diagramu
+        setShuffledVennItems(shuffleArray(originalVennItems));
+        setVennAnswers({});
 
-        </div>
-      </div>
-    );
-  }
+        // 4. Reset lékařských případů
+        setCurrentCaseIndex(0);
+        setSelectedCaseOption(null);
+        setCaseAnswered(false);
+        setCaseCorrect(null);
 
-  if (finished) {
-    return (
-      <div className="min-h-screen flex items-center justify-center p-6">
-        <div className="bg-slate-800 p-8 rounded-3xl max-w-2xl w-full border border-slate-700 shadow-2xl text-center">
+        setScreen('game');
+        setActiveTab(0);
+        setTimerRunning(true);
+      };
 
-          <h1 className="text-4xl font-black text-teal-400 mb-4">
-            Konec hry
-          </h1>
+      // Anatomický výběr (kliknutí na postavu)
+      const handleAnatomyClick = (glandId) => {
+        if (currentAnatomyIndex >= shuffledAnatomyOrder.length) return;
+        
+        const targetGlandId = shuffledAnatomyOrder[currentAnatomyIndex];
+        if (anatomyAnswers[targetGlandId] !== undefined) return; // již zodpovězeno
+        
+        const isCorrect = glandId === targetGlandId;
+        if (isCorrect) {
+          playSound('success');
+          setScore(prev => prev + 15);
+          setAnatomyAnswers(prev => ({ ...prev, [targetGlandId]: true }));
+        } else {
+          playSound('error');
+          setAnatomyAnswers(prev => ({ ...prev, [targetGlandId]: false }));
+        }
+        
+        setCurrentAnatomyIndex(prev => prev + 1);
+      };
 
-          <p className="text-6xl font-black mb-4">
-            {score}
-          </p>
+      // Výběry u třífázového spojování
+      const handleHormoneSelect = (hormone) => {
+        playSound('click');
+        if (selectedHormone?.id === hormone.id) {
+          setSelectedHormone(null);
+        } else {
+          setSelectedHormone(hormone);
+          checkAndExecuteThreeWayMatch(hormone, selectedGland, selectedFunction);
+        }
+      };
 
-          <p className="text-slate-300 mb-8">
-            bodů
-          </p>
+      const handleGlandSelect = (glandName) => {
+        playSound('click');
+        if (selectedGland === glandName) {
+          setSelectedGland(null);
+        } else {
+          setSelectedGland(glandName);
+          checkAndExecuteThreeWayMatch(selectedHormone, glandName, selectedFunction);
+        }
+      };
 
-          <button
-            onClick={restartGame}
-            className="bg-teal-500 hover:bg-teal-400 text-slate-900 font-black px-8 py-4 rounded-2xl text-xl transition"
-          >
-            Hrát znovu
-          </button>
+      const handleFunctionSelect = (funcText) => {
+        playSound('click');
+        if (selectedFunction === funcText) {
+          setSelectedFunction(null);
+        } else {
+          setSelectedFunction(funcText);
+          checkAndExecuteThreeWayMatch(selectedHormone, selectedGland, funcText);
+        }
+      };
 
-        </div>
-      </div>
-    );
-  }
+      // Kontrola správného třífázového spárování
+      const checkAndExecuteThreeWayMatch = (hormone, gland, func) => {
+        if (hormone && gland && func) {
+          const isCorrect = (hormone.source === gland) && (hormone.func === func);
 
-  return (
-    <div className="min-h-screen p-6">
+          if (isCorrect) {
+            playSound('success');
+            setScore(prev => prev + 20); 
+            setMatchedHormones(prev => [...prev, hormone.name]);
+          } else {
+            playSound('error');
+          }
+          setSelectedHormone(null);
+          setSelectedGland(null);
+          setSelectedFunction(null);
+        }
+      };
 
-      <div className="max-w-3xl mx-auto">
+      // Zatřídění tvrzení (Venn)
+      const handleVennSort = (itemId, category) => {
+        playSound('click');
+        const item = shuffledVennItems.find(i => i.id === itemId);
+        const isCorrect = item.cat === category;
+        
+        if (isCorrect) {
+          playSound('success');
+          setScore(prev => prev + 15);
+        } else {
+          playSound('error');
+        }
+        setVennAnswers(prev => ({ ...prev, [itemId]: category }));
+      };
 
-        <div className="bg-slate-800 rounded-3xl p-6 border border-slate-700 shadow-2xl">
+      // Výběr možnosti v lékařském případu
+      const handleCaseOptionSelect = (option) => {
+        if (caseAnswered) return;
+        playSound('click');
+        setSelectedCaseOption(option);
+        setCaseAnswered(true);
+        const isCorrect = option === cases[currentCaseIndex].correct;
+        setCaseCorrect(isCorrect);
+        if (isCorrect) {
+          playSound('success');
+          setScore(prev => prev + 25);
+        } else {
+          playSound('error');
+        }
+      };
 
-          <div className="flex justify-between items-center mb-8">
+      const handleNextCase = () => {
+        playSound('click');
+        if (currentCaseIndex < cases.length - 1) {
+          setCurrentCaseIndex(prev => prev + 1);
+          setSelectedCaseOption(null);
+          setCaseAnswered(false);
+          setCaseCorrect(null);
+        } else {
+          playSound('victory');
+          setScreen('result');
+          setTimerRunning(false);
+        }
+      };
 
-            <div>
-              <h1 className="text-2xl font-black text-teal-400">
-                Hormonální trenažér
-              </h1>
+      const formatTime = (seconds) => {
+        const mins = Math.floor(seconds / 60);
+        const secs = seconds % 60;
+        return `${mins}:${secs < 10 ? '0' : ''}${secs}`;
+      };
 
-              <p className="text-slate-400">
-                Otázka {currentQuestion + 1} z {questions.length}
-              </p>
+      // Realistické, vědecké zhodnocení výkonu na základě finálního skóre
+      const getRank = (finalScore) => {
+        if (finalScore >= 450) return { title: "Profesor Endokrinologie 🎓", desc: "Vynikající úroveň. Prokázaná schopnost komplexně integrovat znalosti o endokrinní regulaci a klinických souvislostech." };
+        if (finalScore >= 320) return { title: "Garant Klinického Výzkumu 🔬", desc: "Velmi dobrá úroveň. Solidní znalost anatomie a fyziologických funkcí s drobnými nedostatky v detailech nebo klinické diagnostice." };
+        if (finalScore >= 180) return { title: "Mladší Vědecký Asistent 🧪", desc: "Standardní úroveň. Základní biologické principy jsou pochopeny, doporučujeme hlubší zaměření na vztahy mezi žlázami a cílovými tkáněmi." };
+        return { title: "Laický Pozorovatel 🫁", desc: "Rozvojová úroveň. Pro dosažení požadovaných výstupů doporučujeme znovu prostudovat materiály k zpětné vazbě a funkce jednotlivých hormonů." };
+      };
+
+      const isFunctionMatched = (funcText) => {
+        return hormonesList.some(h => h.func === funcText && matchedHormones.includes(h.name));
+      };
+
+      const currentAnatomyTargetId = shuffledAnatomyOrder[currentAnatomyIndex];
+      const currentAnatomyTargetGland = glands.find(g => g.id === currentAnatomyTargetId);
+
+      return (
+        <div className="min-h-screen bg-slate-900 text-slate-100 flex flex-col font-sans select-none selection:bg-teal-500 selection:text-white flex-grow">
+          
+          {/* HLAVNÍ NAVIGAČNÍ PANEL */}
+          <header className="bg-slate-800 border-b border-slate-700 px-6 py-4 flex flex-wrap items-center justify-between shadow-lg sticky top-0 z-50">
+            <div className="flex items-center space-x-3">
+              <div className="bg-teal-500 text-slate-900 p-2 rounded-xl shadow-inner animate-pulse">
+                <Icon name="dna" className="w-6 h-6" />
+              </div>
+              <div>
+                <h1 className="text-xl font-bold tracking-tight text-white flex items-center gap-1.5">
+                  Hormonální Trenažér <span className="text-xs bg-teal-500/20 text-teal-300 font-semibold px-2 py-0.5 rounded-full border border-teal-500/30">2. Ročník</span>
+                </h1>
+                <p className="text-xs text-slate-400">Interaktivní 5-minutové procvičování humoralní soustavy</p>
+              </div>
             </div>
 
-            <div className="text-right">
-              <p className="text-slate-400 text-sm">Čas</p>
-              <p className="text-2xl font-black">
-                {formatTime(timeLeft)}
-              </p>
-            </div>
+            {screen === 'game' && (
+              <div className="flex items-center space-x-6 mt-3 sm:mt-0">
+                <div className="flex items-center space-x-2 bg-slate-900/60 px-4 py-2 rounded-full border border-slate-700">
+                  <Icon name="clock" className="w-5 h-5 text-amber-400" />
+                  <span className={`font-mono text-lg font-bold ${timeLeft < 60 ? 'text-rose-400 animate-pulse' : 'text-slate-200'}`}>
+                    {formatTime(timeLeft)}
+                  </span>
+                </div>
 
-          </div>
+                <div className="flex items-center space-x-2 bg-slate-900/60 px-4 py-2 rounded-full border border-slate-700">
+                  <Icon name="flame" className="w-5 h-5 text-teal-400" />
+                  <span className="text-lg font-mono font-bold text-teal-300">{score} b.</span>
+                </div>
 
-          <div className="mb-8">
+                <button 
+                  onClick={() => { if (confirm('Opravdu chcete restartovat hru?')) startGame(); }}
+                  className="text-slate-400 hover:text-white transition-colors p-2"
+                  title="Restartovat"
+                >
+                  <Icon name="refresh-cw" className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+          </header>
 
-            <h2 className="text-2xl font-bold mb-6">
-              {questions[currentQuestion].q}
-            </h2>
+          {/* HLAVNÍ OBSAHOVÁ ČÁST */}
+          <main className="flex-grow flex flex-col max-w-7xl w-full mx-auto p-4 md:p-6 justify-center">
+            
+            {/* 1. ÚVODNÍ STRÁNKA */}
+            {screen === 'intro' && (
+              <div className="max-w-3xl mx-auto w-full bg-slate-800 rounded-3xl border border-slate-700 p-8 shadow-2xl relative overflow-hidden my-6">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl -z-10" />
+                <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-purple-500/10 rounded-full blur-2xl -z-10" />
 
-            <div className="space-y-3">
+                <div className="text-center mb-8">
+                  <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-semibold bg-teal-400/10 text-teal-300 border border-teal-400/20 mb-3">
+                    <Icon name="sparkles" className="w-3.5 h-3.5" /> Vzdělávací Biologická Minihra
+                  </div>
+                  <h2 className="text-3xl md:text-4xl font-black text-white leading-tight">
+                    Vítej v Endokrinním Trenažéru!
+                  </h2>
+                  <p className="text-slate-300 mt-3 text-lg">
+                    Otestuj své znalosti o hormonech, žlázách a regulacích, které řídí lidské tělo.
+                  </p>
+                </div>
 
-              {questions[currentQuestion].options.map((option, index) => {
+                <div className="grid md:grid-cols-2 gap-6 mb-8">
+                  <div className="bg-slate-900/50 p-5 rounded-2xl border border-slate-700/50">
+                    <h3 className="font-bold text-white mb-3 flex items-center gap-2">
+                      <Icon name="activity" className="w-5 h-5 text-teal-400" /> Struktura trenažéru:
+                    </h3>
+                    <ul className="space-y-2.5 text-sm text-slate-300">
+                      <li className="flex items-start gap-2">
+                        <span className="text-teal-400 mt-0.5">✔</span>
+                        <span><strong>1. Anatomie</strong> – Určení polohy 8 hlavních endokrinních žláz v těle.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-teal-400 mt-0.5">✔</span>
+                        <span><strong>2. Spojování</strong> – Propojování hormonů, žláz a jejich fyziologických funkcí.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-teal-400 mt-0.5">✔</span>
+                        <span><strong>3. Porovnání</strong> – Rozlišení vlastností nervové a hormonální soustavy.</span>
+                      </li>
+                      <li className="flex items-start gap-2">
+                        <span className="text-teal-400 mt-0.5">✔</span>
+                        <span><strong>4. Diagnostika</strong> – Řešení 5 klinických případů z lékařské praxe.</span>
+                      </li>
+                    </ul>
+                  </div>
 
-                let style =
-                  "bg-slate-900 hover:bg-slate-700 border-slate-700";
+                  <div className="bg-slate-900/50 p-5 rounded-2xl border border-slate-700/50 flex flex-col justify-between">
+                    <div>
+                      <h3 className="font-bold text-white mb-3 flex items-center gap-2">
+                        <Icon name="clock" className="w-5 h-5 text-amber-400" /> Časový limit
+                      </h3>
+                      <p className="text-sm text-slate-300 leading-relaxed">
+                        Na splnění celé sady úkolů a dosažení co nejvyššího skóre máš vyhrazeno přesně <strong>5 minut</strong>.
+                      </p>
+                    </div>
+                    <div className="mt-4 pt-4 border-t border-slate-800 text-xs text-slate-400 text-center font-semibold">
+                      Určeno pro podporu výuky biologie SŠ
+                    </div>
+                  </div>
+                </div>
 
-                if (selected !== null) {
-
-                  if (option === questions[currentQuestion].correct) {
-                    style = "bg-green-600 border-green-400";
-                  }
-                  else if (option === selected) {
-                    style = "bg-red-600 border-red-400";
-                  }
-                }
-
-                return (
+                <div className="text-center">
                   <button
-                    key={index}
-                    onClick={() => answerQuestion(option)}
-                    className={`w-full p-4 rounded-2xl border text-left font-semibold transition ${style}`}
+                    onClick={startGame}
+                    className="inline-flex items-center space-x-3 bg-teal-500 hover:bg-teal-400 text-slate-950 font-extrabold text-lg px-8 py-4 rounded-2xl shadow-lg hover:shadow-teal-500/20 transition-all transform hover:-translate-y-0.5 duration-150 active:translate-y-0"
                   >
-                    {option}
+                    <span>Spustit trenažér</span>
+                    <Icon name="play" className="w-5 h-5 fill-slate-950" />
                   </button>
-                );
-              })}
+                </div>
+              </div>
+            )}
 
-            </div>
+            {/* 2. HERNÍ PLOCHA */}
+            {screen === 'game' && (
+              <div className="bg-slate-800 rounded-3xl border border-slate-700 shadow-2xl overflow-hidden flex flex-col min-h-[600px]">
+                
+                {/* VOLBA ÚKOLŮ */}
+                <div className="flex bg-slate-900 border-b border-slate-700 p-2 overflow-x-auto space-x-1">
+                  {[
+                    { name: "1. Anatomický Trenažér", disabled: false },
+                    { name: "2. Spojování Hormonů", disabled: false },
+                    { name: "3. Souboj Soustav", disabled: false },
+                    { name: "4. Lékařská Diagnostika", disabled: false }
+                  ].map((tab, idx) => (
+                    <button
+                      key={idx}
+                      onClick={() => { playSound('click'); setActiveTab(idx); }}
+                      className={`flex-shrink-0 px-4 py-3 rounded-xl font-bold text-sm transition-all ${
+                        activeTab === idx 
+                          ? 'bg-teal-500 text-slate-950 shadow-md' 
+                          : 'text-slate-400 hover:text-slate-200 hover:bg-slate-800/80'
+                      }`}
+                    >
+                      {tab.name}
+                    </button>
+                  ))}
+                </div>
 
-          </div>
+                <div className="flex-grow p-6">
+                  
+                  {/* TAB 0: ANATOMICKÝ TRENAŽÉR */}
+                  {activeTab === 0 && (
+                    <div className="grid lg:grid-cols-12 gap-8 items-center">
+                      <div className="lg:col-span-5 text-center lg:text-left flex flex-col justify-center">
+                        <div className="bg-slate-900/60 p-5 rounded-2xl border border-slate-700">
+                          <h3 className="text-teal-400 font-extrabold text-xs uppercase tracking-widest mb-1">Úkol 1/4</h3>
+                          <h4 className="text-xl font-black text-white">Najdi endokrinní žlázu</h4>
+                          
+                          {currentAnatomyIndex < shuffledAnatomyOrder.length ? (
+                            <div className="mt-4 p-4 bg-teal-500/10 rounded-xl border border-teal-500/30 animate-fadeIn">
+                              <p className="text-slate-400 text-xs">Ukaž na těle, kde leží:</p>
+                              <p className="text-2xl font-black text-white mt-1">
+                                {currentAnatomyTargetGland?.name}
+                              </p>
+                              <p className="text-sm text-slate-300 mt-2 italic leading-relaxed">
+                                💡 Nápověda: {currentAnatomyTargetGland?.desc}
+                              </p>
+                            </div>
+                          ) : (
+                            <div className="mt-4 p-4 bg-emerald-500/10 rounded-xl border border-emerald-500/30 text-emerald-400">
+                              <p className="font-bold flex items-center justify-center gap-2">
+                                <Icon name="check-circle" className="w-5 h-5" /> Všechny žlázy úspěšně lokalizovány!
+                              </p>
+                              <button 
+                                onClick={() => { playSound('click'); setActiveTab(1); }} 
+                                className="mt-3 w-full bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold py-2 rounded-lg text-sm transition-colors"
+                              >
+                                Pokračovat na Spojování Hormonů
+                              </button>
+                            </div>
+                          )}
 
-          <div className="flex justify-between items-center">
+                          <div className="mt-6">
+                            <h5 className="text-xs font-bold text-slate-400 uppercase mb-2">Průběh lokalizace:</h5>
+                            <div className="grid grid-cols-4 gap-2">
+                              {shuffledAnatomyOrder.map((glandId, idx) => {
+                                const isAnswered = anatomyAnswers[glandId] !== undefined;
+                                const isCorrect = anatomyAnswers[glandId] === true;
+                                const isCurrent = idx === currentAnatomyIndex;
 
-            <div>
-              <p className="text-slate-400 text-sm">Skóre</p>
-              <p className="text-3xl font-black text-teal-400">
-                {score}
-              </p>
-            </div>
+                                return (
+                                  <div 
+                                    key={glandId} 
+                                    className={`text-xs p-1.5 rounded text-center border font-bold ${
+                                      isCorrect ? 'bg-emerald-500/20 border-emerald-500/50 text-emerald-300' :
+                                      isAnswered ? 'bg-rose-500/20 border-rose-500/50 text-rose-300' :
+                                      isCurrent ? 'bg-teal-500/20 border-teal-500 animate-pulse text-teal-300' :
+                                      'bg-slate-800 border-slate-700 text-slate-500'
+                                    }`}
+                                  >
+                                    {isAnswered ? (isCorrect ? '✓' : '✗') : `žláza ${idx + 1}`}
+                                  </div>
+                                );
+                              })}
+                            </div>
+                          </div>
+                        </div>
+                      </div>
 
-            <div className="w-48 bg-slate-900 rounded-full h-4 overflow-hidden">
-              <div
-                className="bg-teal-500 h-4 transition-all"
-                style={{
-                  width: `${((currentQuestion + 1) / questions.length) * 100}%`
-                }}
-              ></div>
-            </div>
+                      {/* Anatomické schéma postavy */}
+                      <div className="lg:col-span-7 flex justify-center">
+                        <div className="relative bg-slate-900 rounded-3xl p-4 border border-slate-700/60 max-w-sm w-full">
+                          <svg viewBox="0 0 300 450" className="w-full h-auto">
+                            <path 
+                              d="M 150 20 Q 115 20 115 50 Q 115 70 125 80 L 125 100 Q 80 120 75 180 Q 70 240 90 260 L 95 260 Q 95 310 105 340 L 105 440 L 135 440 L 135 370 L 145 370 L 145 440 L 175 440 L 175 340 Q 185 310 185 260 L 190 260 Q 210 240 205 180 Q 200 120 155 100 L 155 80 Q 165 70 165 50 Q 165 20 150 20 Z" 
+                              fill="#334155" 
+                              stroke="#475569" 
+                              strokeWidth="2" 
+                            />
+                            <path d="M 135 55 Q 150 65 165 55" stroke="#475569" strokeWidth="1.5" fill="none" />
+                            <circle cx="138" cy="45" r="2" fill="#475569" />
+                            <circle cx="162" cy="45" r="2" fill="#475569" />
 
-          </div>
+                            {glands.map((g) => {
+                              const answered = anatomyAnswers[g.id] !== undefined;
+                              const isCorrect = anatomyAnswers[g.id] === true;
+                              
+                              let color = "#475569"; // Neutrální šedá barva pro nezodpovězené body
+                              if (answered) color = isCorrect ? "#10b981" : "#f43f5e"; // Zelená při úspěchu, červená při chybě
+
+                              return (
+                                <g key={g.id} className="cursor-pointer group" onClick={() => handleAnatomyClick(g.id)}>
+                                  <line 
+                                    x1={g.cx} 
+                                    y1={g.cy} 
+                                    x2={g.cx > 150 ? g.cx + 40 : g.cx - 40} 
+                                    y2={g.cy} 
+                                    stroke={color} 
+                                    strokeWidth="1.5" 
+                                    strokeDasharray="2,2" 
+                                  />
+                                  <circle 
+                                    cx={g.cx} 
+                                    cy={g.cy} 
+                                    r="10" 
+                                    fill={color} 
+                                    stroke="#1e293b"
+                                    strokeWidth="2"
+                                  />
+                                  
+                                  {/* Interaktivní popisek (Tooltip) */}
+                                  <g className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 pointer-events-none">
+                                    <rect 
+                                      x={g.cx > 150 ? g.cx + 45 : g.cx - 115} 
+                                      y={g.cy - 12} 
+                                      width="70" 
+                                      height="24" 
+                                      rx="6" 
+                                      fill="#1e293b" 
+                                      stroke="#475569" 
+                                      strokeWidth="1.5" 
+                                    />
+                                    <text 
+                                      x={g.cx > 150 ? g.cx + 80 : g.cx - 80} 
+                                      y={g.cy + 4} 
+                                      textAnchor="middle" 
+                                      fontSize="9.5" 
+                                      fontWeight="bold"
+                                      fill="#cbd5e1"
+                                    >
+                                      {g.name}
+                                    </text>
+                                  </g>
+                                </g>
+                              );
+                            })}
+                          </svg>
+                          <div className="absolute bottom-2 left-2 right-2 bg-slate-950/80 px-3 py-1.5 rounded-xl border border-slate-800 text-[10px] text-slate-400 text-center">
+                            Kliknutím na odpovídající bod označ hledanou žlázu.
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 1: LABORATORNÍ SPOJOVÁNÍ */}
+                  {activeTab === 1 && (
+                    <div>
+                      <div className="mb-4 bg-slate-900/60 p-4 rounded-xl border border-slate-700 text-center animate-fadeIn">
+                        <h3 className="text-teal-400 font-extrabold text-xs uppercase tracking-widest mb-1">Úkol 2/4</h3>
+                        <h4 className="text-xl font-black text-white">Hormonální laboratoř (3-fázové spojování)</h4>
+                        <p className="text-sm text-slate-300 max-w-2xl mx-auto mt-1">
+                          Pro úspěšné přiřazení musíš vybrat postupně **všechny tři složky**: nejdříve klikni na **Hormon**, poté na jeho **Místo vzniku** a nakonec na jeho **Hlavní funkci**.
+                        </p>
+                      </div>
+
+                      {/* Přehled aktuálně vybrané kombinace */}
+                      <div className="mb-6 grid grid-cols-3 gap-4 max-w-3xl mx-auto bg-slate-900/40 p-3 rounded-2xl border border-slate-800">
+                        <div className="text-center p-2 rounded-xl bg-slate-900/80 border border-slate-800">
+                          <p className="text-[10px] uppercase font-bold text-cyan-400">1. Vybraný Hormon</p>
+                          <p className="text-sm font-black text-white truncate mt-1">
+                            {selectedHormone ? selectedHormone.name : "..."}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 rounded-xl bg-slate-900/80 border border-slate-800">
+                          <p className="text-[10px] uppercase font-bold text-purple-400">2. Vybrané Místo vzniku</p>
+                          <p className="text-sm font-black text-white truncate mt-1">
+                            {selectedGland ? selectedGland : "..."}
+                          </p>
+                        </div>
+                        <div className="text-center p-2 rounded-xl bg-slate-900/80 border border-slate-800">
+                          <p className="text-[10px] uppercase font-bold text-amber-400">3. Vybraná Funkce</p>
+                          <p className="text-sm font-black text-white truncate mt-1">
+                            {selectedFunction ? selectedFunction : "..."}
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="grid md:grid-cols-3 gap-6">
+                        {/* Levý sloupec: Hormony */}
+                        <div className="space-y-2">
+                          <h4 className="font-bold text-xs text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-cyan-400" /> Hormon
+                          </h4>
+                          {shuffledHormones.map((h) => {
+                            const isMatched = matchedHormones.includes(h.name);
+                            const isSelected = selectedHormone?.id === h.id;
+                            return (
+                              <button
+                                key={h.id}
+                                disabled={isMatched}
+                                onClick={() => handleHormoneSelect(h)}
+                                className={`w-full text-left p-3.5 rounded-xl border text-sm font-bold transition-all flex items-center justify-between ${
+                                  isMatched 
+                                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 line-through opacity-60' 
+                                    : isSelected 
+                                    ? 'bg-cyan-500 text-slate-950 border-cyan-400 shadow-lg scale-[1.02]' 
+                                    : 'bg-slate-900 hover:bg-slate-800 border-slate-800 text-slate-200'
+                                }`}
+                              >
+                                <span>{h.name}</span>
+                                {isMatched && <Icon name="check" className="w-4 h-4 text-emerald-400" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Střední sloupec: Žlázy */}
+                        <div className="space-y-2">
+                          <h4 className="font-bold text-xs text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-purple-400" /> Kde vzniká (Žláza)
+                          </h4>
+                          {shuffledGlands.map((sourceName, idx) => {
+                            const isSelected = selectedGland === sourceName;
+                            return (
+                              <button
+                                key={idx}
+                                onClick={() => handleGlandSelect(sourceName)}
+                                className={`w-full text-left p-3.5 rounded-xl border text-sm font-semibold transition-all ${
+                                  isSelected
+                                    ? 'bg-purple-500 text-slate-950 border-purple-400 shadow-lg scale-[1.02]'
+                                    : 'bg-slate-900 hover:bg-slate-800/80 border-slate-800 text-slate-300'
+                                }`}
+                              >
+                                {sourceName}
+                              </button>
+                            );
+                          })}
+                          <div className="p-4 bg-slate-900/40 rounded-xl border border-slate-800/60 text-xs text-slate-400 italic leading-relaxed">
+                            Tip: Slinivka, nadledviny i hypothalamus produkují více hormonů obsažených v seznamu!
+                          </div>
+                        </div>
+
+                        {/* Pravý sloupec: Funkce */}
+                        <div className="space-y-2">
+                          <h4 className="font-bold text-xs text-slate-400 uppercase tracking-wider mb-2 flex items-center gap-1.5">
+                            <span className="w-2 h-2 rounded-full bg-amber-400" /> Hlavní funkce
+                          </h4>
+                          {shuffledFunctions.map((funcText, idx) => {
+                            const isMatched = isFunctionMatched(funcText);
+                            const isSelected = selectedFunction === funcText;
+                            return (
+                              <button
+                                key={idx}
+                                disabled={isMatched}
+                                onClick={() => handleFunctionSelect(funcText)}
+                                className={`w-full text-left p-3.5 rounded-xl border text-xs leading-relaxed transition-all ${
+                                  isMatched
+                                    ? 'bg-emerald-500/10 border-emerald-500/20 text-emerald-400 line-through opacity-60'
+                                    : isSelected
+                                    ? 'bg-amber-500 text-slate-950 border-amber-400 shadow-lg scale-[1.02]'
+                                    : 'bg-slate-900 hover:bg-slate-800/80 border-slate-800 text-slate-300'
+                                }`}
+                              >
+                                {funcText}
+                              </button>
+                            );
+                          })}
+                        </div>
+                      </div>
+
+                      {matchedHormones.length === hormonesList.length && (
+                        <div className="mt-6 p-4 bg-emerald-500/15 border border-emerald-500/30 rounded-2xl text-center">
+                          <p className="text-emerald-400 font-bold mb-2 flex items-center justify-center gap-2">
+                            <Icon name="check-circle" className="w-5 h-5" /> Výborně! Všechny trojice jsou správně spárovány.
+                          </p>
+                          <button 
+                            onClick={() => { playSound('click'); setActiveTab(2); }} 
+                            className="bg-emerald-500 hover:bg-emerald-400 text-slate-950 font-bold px-6 py-2 rounded-xl text-sm transition-colors"
+                          >
+                            Přejít na Souboj Soustav (Venn)
+                          </button>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* TAB 2: VENNŮV DIAGRAM SOUSTAV */}
+                  {activeTab === 2 && (
+                    <div>
+                      <div className="mb-6 bg-slate-900/60 p-4 rounded-xl border border-slate-700 text-center animate-fadeIn">
+                        <h3 className="text-teal-400 font-extrabold text-xs uppercase tracking-widest mb-1">Úkol 3/4</h3>
+                        <h4 className="text-xl font-black text-white">Souboj soustav (Vennův diagram)</h4>
+                        <p className="text-sm text-slate-300 max-w-2xl mx-auto mt-1">
+                          Správně roztřiď vlastnosti řízení lidského těla. Patří k <strong>Nervové</strong> soustavě, k <strong>Hormonální (Endokrinní)</strong>, nebo pro <strong>Obě společně</strong>?
+                        </p>
+                      </div>
+
+                      <div className="grid lg:grid-cols-3 gap-6 items-start">
+                        {/* Zamíchaný seznam výroků */}
+                        <div className="lg:col-span-1 space-y-3">
+                          <h4 className="font-bold text-xs text-slate-400 uppercase tracking-wider mb-2">Tvrzení k zatřídění:</h4>
+                          <div className="space-y-2 max-h-[420px] overflow-y-auto pr-1">
+                            {shuffledVennItems.map((item) => {
+                              const answer = vennAnswers[item.id];
+                              return (
+                                <div 
+                                  key={item.id} 
+                                  className={`p-3.5 rounded-xl border transition-all text-sm ${
+                                    answer !== undefined
+                                      ? 'bg-slate-900/40 border-slate-800/80 text-slate-500 opacity-60'
+                                      : 'bg-slate-900 border-slate-700 text-slate-200'
+                                  }`}
+                                >
+                                  <p className="font-medium leading-relaxed mb-3">{item.text}</p>
+                                  
+                                  {answer === undefined ? (
+                                    <div className="grid grid-cols-3 gap-1">
+                                      <button
+                                        onClick={() => handleVennSort(item.id, 'N')}
+                                        className="bg-sky-500/10 hover:bg-sky-500 hover:text-slate-950 text-sky-400 text-[10px] font-bold py-1 px-1.5 rounded transition-colors border border-sky-500/20"
+                                      >
+                                        Nervová
+                                      </button>
+                                      <button
+                                        onClick={() => handleVennSort(item.id, 'E')}
+                                        className="bg-amber-500/10 hover:bg-amber-500 hover:text-slate-950 text-amber-400 text-[10px] font-bold py-1 px-1.5 rounded transition-colors border border-amber-500/20"
+                                      >
+                                        Hormonální
+                                      </button>
+                                      <button
+                                        onClick={() => handleVennSort(item.id, 'B')}
+                                        className="bg-purple-500/10 hover:bg-purple-500 hover:text-slate-950 text-purple-400 text-[10px] font-bold py-1 px-1.5 rounded transition-colors border border-purple-500/20"
+                                      >
+                                        Obě
+                                      </button>
+                                    </div>
+                                  ) : (
+                                    <div className="text-xs flex items-center gap-1 font-semibold text-slate-400">
+                                      <span>Zatříděno do:</span>
+                                      <span className={`px-2 py-0.5 rounded text-[10px] font-bold ${
+                                        answer === 'N' ? 'bg-sky-500/20 text-sky-300' :
+                                        answer === 'E' ? 'bg-amber-500/20 text-amber-300' :
+                                        'bg-purple-500/20 text-purple-300'
+                                      }`}>
+                                        {answer === 'N' ? 'Nervová s.' : answer === 'E' ? 'Hormonální s.' : 'Obě společně'}
+                                      </span>
+                                      {item.cat === answer ? (
+                                        <span className="text-emerald-400 ml-auto flex items-center gap-1">✓ Správně</span>
+                                      ) : (
+                                        <span className="text-rose-400 ml-auto flex items-center gap-1">✗ Chyba</span>
+                                      )}
+                                    </div>
+                                  )}
+                                </div>
+                              );
+                            })}
+                          </div>
+                        </div>
+
+                        {/* Vizuální Vennovy diagramy */}
+                        <div className="lg:col-span-2 bg-slate-900 rounded-3xl p-6 border border-slate-700/60 h-full flex flex-col justify-between">
+                          <div className="space-y-4">
+                            <h4 className="font-bold text-sm text-slate-300 text-center">Přehled zatřídění v soustavách:</h4>
+                            
+                            <div className="grid md:grid-cols-3 gap-4">
+                              {/* Box Nervová soustava */}
+                              <div className="bg-sky-500/5 border border-sky-500/30 rounded-2xl p-4 min-h-[140px]">
+                                <h5 className="font-black text-sky-400 text-xs uppercase tracking-wider mb-2 border-b border-sky-500/20 pb-1 flex items-center justify-between">
+                                  <span>Nervová Soustava</span>
+                                  <span className="bg-sky-500 text-slate-950 font-bold px-1.5 py-0.2 rounded-full text-[10px]">A</span>
+                                </h5>
+                                <ul className="space-y-1.5">
+                                  {shuffledVennItems.filter(i => vennAnswers[i.id] === 'N').map(i => (
+                                    <li key={i.id} className={`text-xs p-1.5 rounded border leading-snug ${i.cat === 'N' ? 'bg-emerald-500/15 border-emerald-500/20 text-slate-300' : 'bg-rose-500/15 border-rose-500/20 text-rose-300'}`}>
+                                      • {i.text}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+
+                              {/* Společné vlastnosti */}
+                              <div className="bg-purple-500/5 border border-purple-500/30 rounded-2xl p-4 min-h-[140px]">
+                                <h5 className="font-black text-purple-400 text-xs uppercase tracking-wider mb-2 border-b border-purple-500/20 pb-1 flex items-center justify-between">
+                                  <span>Společné rysy</span>
+                                  <span className="bg-purple-500 text-slate-950 font-bold px-1.5 py-0.2 rounded-full text-[10px]">A + B</span>
+                                </h5>
+                                <ul className="space-y-1.5">
+                                  {shuffledVennItems.filter(i => vennAnswers[i.id] === 'B').map(i => (
+                                    <li key={i.id} className={`text-xs p-1.5 rounded border leading-snug ${i.cat === 'B' ? 'bg-emerald-500/15 border-emerald-500/20 text-slate-300' : 'bg-rose-500/15 border-rose-500/20 text-rose-300'}`}>
+                                      • {i.text}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+
+                              {/* Box Hormonální soustava */}
+                              <div className="bg-amber-500/5 border border-amber-500/30 rounded-2xl p-4 min-h-[140px]">
+                                <h5 className="font-black text-amber-400 text-xs uppercase tracking-wider mb-2 border-b border-amber-500/20 pb-1 flex items-center justify-between">
+                                  <span>Hormonální s.</span>
+                                  <span className="bg-amber-500 text-slate-950 font-bold px-1.5 py-0.2 rounded-full text-[10px]">B</span>
+                                </h5>
+                                <ul className="space-y-1.5">
+                                  {shuffledVennItems.filter(i => vennAnswers[i.id] === 'E').map(i => (
+                                    <li key={i.id} className={`text-xs p-1.5 rounded border leading-snug ${i.cat === 'E' ? 'bg-emerald-500/15 border-emerald-500/20 text-slate-300' : 'bg-rose-500/15 border-rose-500/20 text-rose-300'}`}>
+                                      • {i.text}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            </div>
+                          </div>
+
+                          {Object.keys(vennAnswers).length === originalVennItems.length && (
+                            <div className="mt-6 pt-4 border-t border-slate-800 text-center">
+                              <button 
+                                onClick={() => { playSound('click'); setActiveTab(3); }} 
+                                className="bg-purple-500 hover:bg-purple-400 text-slate-950 font-black px-8 py-3 rounded-xl text-sm transition-colors shadow-lg"
+                              >
+                                Pokračovat k Diagnózám lékaře
+                              </button>
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* TAB 3: DIAGNOSTIKA KLINICKÝCH PŘÍPADŮ */}
+                  {activeTab === 3 && (
+                    <div className="max-w-2xl mx-auto">
+                      <div className="mb-6 bg-slate-900/60 p-4 rounded-xl border border-slate-700 text-center animate-fadeIn">
+                        <h3 className="text-teal-400 font-extrabold text-xs uppercase tracking-widest mb-1">Úkol 4/4</h3>
+                        <h4 className="text-xl font-black text-white">Lékařská diagnostika</h4>
+                        <p className="text-sm text-slate-300 mt-1">
+                          Vyřeš 5 klinických případů z praxe. Přečti si symptomy pacienta a urči správnou hormonální příčinu.
+                        </p>
+                      </div>
+
+                      {/* Karta klinického případu */}
+                      <div className="bg-slate-900 rounded-3xl p-6 border border-slate-700 relative overflow-hidden">
+                        <div className="absolute top-0 right-0 px-4 py-1.5 bg-teal-500/15 text-teal-400 text-xs font-bold rounded-bl-xl border-l border-b border-slate-700">
+                          Případ {currentCaseIndex + 1} z {cases.length}
+                        </div>
+
+                        <h4 className="text-lg font-bold text-white mb-2">{cases[currentCaseIndex].title}</h4>
+                        <p className="text-slate-300 text-sm leading-relaxed mb-6 bg-slate-950/50 p-4 rounded-xl border border-slate-800 italic">
+                          " {cases[currentCaseIndex].desc} "
+                        </p>
+
+                        <p className="text-sm font-bold text-slate-100 mb-3">{cases[currentCaseIndex].question}</p>
+                        
+                        <div className="grid sm:grid-cols-2 gap-3 mb-6">
+                          {cases[currentCaseIndex].options.map((opt, idx) => {
+                            const isSelected = selectedCaseOption === opt;
+                            const isCorrectAnswer = opt === cases[currentCaseIndex].correct;
+                            
+                            let btnStyle = "bg-slate-800/80 border-slate-700 hover:bg-slate-800 hover:border-slate-600 text-slate-200";
+                            if (caseAnswered) {
+                              if (isCorrectAnswer) {
+                                btnStyle = "bg-emerald-500/20 border-emerald-500 text-emerald-300";
+                              } else if (isSelected) {
+                                btnStyle = "bg-rose-500/20 border-rose-500 text-rose-300";
+                              } else {
+                                btnStyle = "bg-slate-900/50 border-slate-800 text-slate-600 cursor-not-allowed";
+                              }
+                            }
+
+                            return (
+                              <button
+                                key={idx}
+                                disabled={caseAnswered}
+                                onClick={() => handleCaseOptionSelect(opt)}
+                                className={`p-3 rounded-xl border text-sm font-semibold transition-all text-left flex items-center justify-between ${btnStyle}`}
+                              >
+                                <span>{opt}</span>
+                                {caseAnswered && isCorrectAnswer && <Icon name="check-circle" className="w-4 h-4 text-emerald-400" />}
+                                {caseAnswered && isSelected && !isCorrectAnswer && <Icon name="x-circle" className="w-4 h-4 text-rose-400" />}
+                              </button>
+                            );
+                          })}
+                        </div>
+
+                        {/* Zpětná vazba pro studenty */}
+                        {caseAnswered && (
+                          <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 animate-fadeIn">
+                            <div className="flex items-start gap-2.5">
+                              {caseCorrect ? (
+                                <Icon name="check-circle" className="w-5 h-5 text-emerald-400 mt-0.5 flex-shrink-0" />
+                              ) : (
+                                <Icon name="shield-alert" className="w-5 h-5 text-rose-400 mt-0.5 flex-shrink-0" />
+                              )}
+                              <div>
+                                <p className={`font-bold text-sm ${caseCorrect ? 'text-emerald-400' : 'text-rose-400'}`}>
+                                  {caseCorrect ? 'Vynikající diagnóza!' : 'Diagnóza nebyla správná.'}
+                                </p>
+                                <p className="text-xs text-slate-300 mt-1 leading-relaxed">
+                                  {cases[currentCaseIndex].feedback}
+                                </p>
+                              </div>
+                            </div>
+                            
+                            <div className="mt-4 flex justify-end">
+                              <button
+                                onClick={handleNextCase}
+                                className="inline-flex items-center gap-1.5 bg-teal-500 hover:bg-teal-400 text-slate-950 font-bold px-5 py-2 rounded-lg text-xs transition-colors"
+                              >
+                                <span>
+                                  {currentCaseIndex < cases.length - 1 ? 'Další diagnóza' : 'Ukončit a vyhodnotit trenažér'}
+                                </span>
+                                <Icon name="arrow-right" className="w-3.5 h-3.5" />
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )}
+
+                </div>
+              </div>
+            )}
+
+            {/* 3. ZÁVĚREČNÉ VYHODNOCENÍ */}
+            {screen === 'result' && (
+              <div className="max-w-2xl mx-auto w-full bg-slate-800 rounded-3xl border border-slate-700 p-8 shadow-2xl relative overflow-hidden my-6 text-center animate-scaleIn">
+                <div className="absolute top-0 right-0 w-64 h-64 bg-teal-500/10 rounded-full blur-3xl -z-10" />
+                <div className="absolute -bottom-10 -left-10 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl -z-10" />
+
+                <div className="inline-flex p-4 bg-teal-500/10 text-teal-400 rounded-full border border-teal-500/20 mb-4 shadow-inner">
+                  <Icon name="award" className="w-12 h-12" />
+                </div>
+
+                <h2 className="text-3xl font-black text-white">Trenažér dokončen!</h2>
+                <p className="text-slate-400 text-sm mt-1">Děkujeme za vyřešení biologické výzvy.</p>
+
+                <div className="my-8 py-6 bg-slate-900/60 rounded-3xl border border-slate-700/60 max-w-md mx-auto">
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest">Tvé celkové skóre</p>
+                  <p className="text-6xl font-black text-teal-400 mt-2 font-mono">{score} <span className="text-2xl font-normal text-slate-500">b.</span></p>
+                  
+                  <div className="grid grid-cols-2 gap-4 mt-6 pt-6 border-t border-slate-800 text-left px-6">
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Zbývající čas:</p>
+                      <p className="text-sm font-bold text-slate-200 mt-0.5">{formatTime(timeLeft)}</p>
+                    </div>
+                    <div>
+                      <p className="text-[10px] uppercase font-bold text-slate-400">Překonáno úkolů:</p>
+                      <p className="text-sm font-bold text-slate-200 mt-0.5">4 ze 4 sekcí</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Realistické akademické hodnocení */}
+                <div className="bg-slate-900 p-6 rounded-2xl border border-slate-700/80 mb-8 max-w-lg mx-auto text-left">
+                  <p className="text-xs font-bold text-teal-400 uppercase tracking-wider mb-1">Dosažený vědecký titul:</p>
+                  <h4 className="text-xl font-extrabold text-white">{getRank(score).title}</h4>
+                  <p className="text-sm text-slate-300 mt-2 leading-relaxed">
+                    {getRank(score).desc}
+                  </p>
+                </div>
+
+                <div className="flex flex-col sm:flex-row gap-3 justify-center">
+                  <button
+                    onClick={startGame}
+                    className="inline-flex items-center justify-center gap-2 bg-teal-500 hover:bg-teal-400 text-slate-950 font-extrabold px-6 py-3.5 rounded-xl transition-all"
+                  >
+                    <Icon name="refresh-cw" className="w-4 h-4" />
+                    <span>Zkusit trenažér znovu</span>
+                  </button>
+                  
+                  <a
+                    href="https://www.nzip.cz/clanek/2306-hormony-zakladni-informace"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="inline-flex items-center justify-center gap-2 bg-slate-700 hover:bg-slate-600 text-slate-200 font-bold px-6 py-3.5 rounded-xl transition-all border border-slate-600"
+                  >
+                    <Icon name="help-circle" className="w-4 h-4" />
+                    <span>Otevřít portál NZIP</span>
+                  </a>
+                </div>
+              </div>
+            )}
+
+          </main>
+
+          {/* ZÁPATÍ */}
+          <footer className="bg-slate-950 py-4 px-6 text-center text-xs text-slate-500 border-t border-slate-900">
+            <p>© 2026 Hormonální Soustava Game | Určeno pro výuku biologie SŠ</p>
+          </footer>
 
         </div>
+      );
+    }
 
-      </div>
-
-    </div>
-  );
-}
-
-ReactDOM.createRoot(document.getElementById("root")).render(<App />);
-
-</script>
-
+    const root = ReactDOM.createRoot(document.getElementById('root'));
+    root.render(<App />);
+  </script>
 </body>
 </html>
